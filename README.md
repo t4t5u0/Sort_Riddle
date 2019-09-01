@@ -1,6 +1,6 @@
 # Sort_Riddle
 
-ソートなぞなぞをするためのBot
+DiscordでソートなぞなぞをするためのBot
 
 コマンド一覧
 
