@@ -1,5 +1,5 @@
 discord.py==1.2.3
-urllib3==1.24.1
+urllib3==1.25.3
 lxml==4.3.2
 regex==2019.8.19
 beautifulsoup4==4.7.1
