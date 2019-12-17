@@ -12,7 +12,7 @@ import regex
 from discord.ext import commands
 
 # サーバのトークン公開しないこと
-TOKEN = 'NjEzMjU2NjM1MTc5MjA0NjEz.XVulBQ.Y-gSFqOYhe2YOS5QcDRGkbWIjdU'
+TOKEN = ''
 
 # コマンドプレフィックスの指定
 bot = commands.Bot(command_prefix='/')
