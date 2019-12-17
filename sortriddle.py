@@ -1,17 +1,20 @@
-import discord
-from discord.ext import commands
-import queue
-import regex 
-import bs4
-import lxml
-import urllib.request, urllib.error
 import linecache
+import queue
 import random
+import sqlite3
+import urllib.error
+import urllib.request
+
+import bs4
+import discord
+import lxml
+import regex
+from discord.ext import commands
 
 # サーバのトークン公開しないこと
-TOKEN = '自分用のトークンを貼り付ける'
+TOKEN = 'NjEzMjU2NjM1MTc5MjA0NjEz.XVulBQ.Y-gSFqOYhe2YOS5QcDRGkbWIjdU'
 
-# コマンドプレフィックスの指定　書き換えるとコマンドの最初の記号が変わる
+# コマンドプレフィックスの指定
 bot = commands.Bot(command_prefix='/')
 
 # 答えを格納するキューと、現在の答えと問題を格納する変数を生成
@@ -34,7 +37,7 @@ async def neko(ctx):
 
 # /question または /q とDMで発言したら出題する処理
 @bot.command(aliases=['q'])
-@commands.dm_only()# DM以外でこのコマンドを入力するとエラーを吐く
+@commands.dm_only()
 async def question(ctx,arg):
     global current_ans
     if answer_set.full():
@@ -48,7 +51,7 @@ async def question(ctx,arg):
 @question.error
 async def question_error(ctx,error):
     if isinstance(error, commands.errors.PrivateMessageOnly):
-        await ctx.send(f'{ctx.author.mention} `/q`はDM限定だにゃー')
+        await ctx.send(f'{ctx.author.mention}`/q`はDM限定だにゃー')
 
 # /answer または /a と発言したら正誤判定する処理 
 @bot.command(aliases=['a'])
@@ -56,14 +59,17 @@ async def answer(ctx,arg):
     global current_ans
     global current_ques
     listed_arg = list(arg)
-    if current_ans == '':
+    if arg == '':
+        pass
+    elif current_ans == '':
         await ctx.send('DMに`/q`で問題を送るにゃ')
     elif arg == current_ans:
+        temp_ans = current_ans
         current_ans = ''
         current_ques = ''
         if not answer_set.empty():
             current_ans = answer_set.get()
-        await ctx.send(f'{ctx.author.mention} 正解だにゃ')
+        await ctx.send(f'{ctx.author.mention} 正解だにゃ\nhttps://ja.m.wikipedia.org/wiki/{temp_ans}')
     elif len(current_ans) != len(listed_arg):
         await ctx.send(f'{ctx.author.mention} ぶっぶー！長さが違うにゃ')
     else:
@@ -71,7 +77,7 @@ async def answer(ctx,arg):
         for i in range(len(current_ans)):
             if current_ans[i] == listed_arg[i]:
                 cnt+=1
-        await ctx.send(f'{ctx.author.mention} ぶっぶー！ **'+ str(cnt) +'** 文字あってるにゃ')
+        await ctx.send(f'{ctx.author.mention} ぶっぶー！ **{str(cnt)}** 文字あってるにゃ')
 
 # /start または /s と発言したらスタートする処理
 @bot.command(aliases=['s'])
@@ -83,8 +89,7 @@ async def start(ctx):
     else:
         text = sorted(current_ans)
         if current_ques == '':
-            for i in range(len(text)):
-                current_ques += text[i]
+            current_ques = ''.join(text)
         await ctx.send('問題は **'+ current_ques +'** だにゃ')
 
 # /giveup と発言したら解答を表示して次の問題をセットする処理
@@ -95,12 +100,14 @@ async def giveup(ctx):
     if current_ans =='':
         await ctx.send('DMに`/q`で問題を送るにゃ')
     else:
-        msg = 'わからないのかにゃ？答えは **' + current_ans + '** だにゃ'
+        temp_ans = current_ans
+        #temp_ques = current_ques
         current_ans = ''
         current_ques = ''
         if not answer_set.empty():
             current_ans = answer_set.get()
-        await ctx.send(msg)
+        await ctx.send(f'わからないのかにゃ？答えは **{temp_ans}** だにゃ')
+        await ctx.send(f'https://ja.m.wikipedia.org/wiki/{temp_ans}')
         
 # /clear と発言したら変数とキューを初期化する処理
 @bot.command()
@@ -117,37 +124,38 @@ async def clear(ctx):
 @bot.command(aliases=['h'])
 async def hint(ctx):
     global current_ans
-    if current_ans =='':
-        await ctx.send('DMに`/q`で問題を送るにゃ')
+    if current_ans:
+        await ctx.send(f'１文字目は **{current_ans[:1]}** だにゃ')
     else:
-        await ctx.send('１文字目は **'+ current_ans[0:1] + '** だにゃ')
+        await ctx.send('DMに`/q`で問題を送るにゃ')
 
 # /wiki と発言したらWikipediaからランダムに出題する処理
 @bot.command(aliases=['w'])
 async def wiki(ctx):
     global current_ans
     global current_ques
+    text = ''
     try:
-        while True:
-            url = urllib.request.urlopen('https://ja.m.wikipedia.org/wiki/%E7%89%B9%E5%88%A5:Random')
-            soup = bs4.BeautifulSoup(url,'lxml')
-            elems = soup.select('#section_0')
-            arg = elems[0].getText().replace(' ','_')
-            if regex.search(r'\p{Han}',arg):#elems に漢字が含まれていたら最初に戻る
-                continue
-            else:
-                break
         if answer_set.full():
             await ctx.send('キューがいっぱいだにゃ')
         else:
-            answer_set.put(arg)
+            while True:
+                url = urllib.request.urlopen('https://ja.m.wikipedia.org/wiki/%E7%89%B9%E5%88%A5:Random')
+                soup = bs4.BeautifulSoup(url,'lxml')
+                elems = soup.select('#section_0')
+                text = elems[0].getText().replace(' ','_')
+                if regex.search(r'\p{Han}',text):#elems に漢字が含まれていたら最初に戻る
+                    continue
+                else:
+                    break
+            answer_set.put(text)
             if current_ans == '':
                 current_ans = answer_set.get()
-            sorted_text = sorted(arg)
-            if current_ques == '':
-                for i in range(len(sorted_text)):
-                    current_ques += sorted_text[i]
-            await ctx.send('問題は **'+ current_ques +'** だにゃ')
+                sorted_text = sorted(text)
+                current_ques = ''.join(sorted_text)
+                await ctx.send(f'問題は **{current_ques}** だにゃ')
+            else:
+                await ctx.send('問題を受け付けたにゃ')
     except Exception as e:
         print (e)
         await ctx.send('サイトにつながらないにゃ')
@@ -160,17 +168,21 @@ async def eng(ctx):
     if answer_set.full():
         await ctx.send('キューがいっぱいだにゃ')
     else:
-        num = random.randint(1,10000)
-        target_line = linecache.getline('wordlist.txt',num).strip('\n')
-        answer_set.put(target_line)
+        num = (random.randint(1,10000),)
+        conn = sqlite3.connect('./wordlist.db')
+        c = conn.cursor()
+        line = c.execute('SELECT word, sorted_word FROM wordlist WHERE id = ?',num)
+        line = tuple(line)
+        answer_set.put(line[0][0])
         if current_ans == '':
             current_ans = answer_set.get()
-        text = sorted(target_line)
-        if current_ques == '':
-            for i in range(len(text)):
-                current_ques += text[i]
-        current_ques = current_ques.lstrip('\n')
-        await ctx.send('問題は **'+ current_ques + '** だにゃ')
+            current_ques = line[0][1]
+            await ctx.send(f'問題は **{current_ques}** だにゃ')
+        else:
+            await ctx.send('問題を受け付けたにゃ')
+            
+        conn.close()
+        #await ctx.send(f'問題は **{current_ques}** だにゃ')
 
 # ステータスに表示するメッセージを管理
 @bot.event
@@ -185,4 +197,5 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # Botの起動とDiscordサーバーへの接続
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)
