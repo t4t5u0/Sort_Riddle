@@ -4,6 +4,7 @@ import random
 import sqlite3
 import urllib.error
 import urllib.request
+import json
 
 import bs4
 import discord
@@ -12,7 +13,9 @@ import regex
 from discord.ext import commands
 
 # サーバのトークン公開しないこと
-TOKEN = ''
+json_open = open('./info.json')
+json_load = json.load(json_open)
+TOKEN = json.load['token']
 
 # コマンドプレフィックスの指定
 bot = commands.Bot(command_prefix='/')
@@ -47,13 +50,13 @@ async def question(ctx,arg):
         if current_ans == '':
             current_ans = answer_set.get()
         await ctx.send('問題を受け付けたにゃ')
-    
+
 @question.error
 async def question_error(ctx,error):
     if isinstance(error, commands.errors.PrivateMessageOnly):
         await ctx.send(f'{ctx.author.mention}`/q`はDM限定だにゃー')
 
-# /answer または /a と発言したら正誤判定する処理 
+# /answer または /a と発言したら正誤判定する処理
 @bot.command(aliases=['a'])
 async def answer(ctx,arg):
     global current_ans
@@ -108,7 +111,7 @@ async def giveup(ctx):
             current_ans = answer_set.get()
         await ctx.send(f'わからないのかにゃ？答えは **{temp_ans}** だにゃ')
         await ctx.send(f'https://ja.m.wikipedia.org/wiki/{temp_ans}')
-        
+
 # /clear と発言したら変数とキューを初期化する処理
 @bot.command()
 async def clear(ctx):
@@ -180,7 +183,7 @@ async def eng(ctx):
             await ctx.send(f'問題は **{current_ques}** だにゃ')
         else:
             await ctx.send('問題を受け付けたにゃ')
-            
+
         conn.close()
         #await ctx.send(f'問題は **{current_ques}** だにゃ')
 
@@ -189,7 +192,7 @@ async def eng(ctx):
 async def on_message(message):
     global current_ans
     if message.author.bot:
-        pass 
+        pass
     elif current_ans == '':
         await bot.change_presence(activity=discord.Game("問題受付"))
     else:
